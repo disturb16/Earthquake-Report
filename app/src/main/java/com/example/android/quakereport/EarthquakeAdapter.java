@@ -65,6 +65,10 @@ public class EarthquakeAdapter extends ArrayAdapter<Earthquake> {
 
         int mag;
         switch ( (int)Math.floor(magnitud) ){
+            case 0:
+                mag = R.color.magnitude1;
+                break;
+
             case 1:
                 mag = R.color.magnitude1;
                 break;
