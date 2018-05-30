@@ -1,5 +1,8 @@
 package com.example.android.quakereport.Utils;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.util.Log;
 
 import com.example.android.quakereport.Earthquake;
@@ -151,5 +154,16 @@ public final class QueryUtils {
         result = extractEarthquakes(response);
 
         return result;
+    }
+
+    public static boolean hasInternetConnection(Context context){
+
+        if (context == null)
+            return false;
+
+        ConnectivityManager cmanager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cmanager.getActiveNetworkInfo();
+
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 }

@@ -15,6 +15,8 @@
  */
 package com.example.android.quakereport;
 
+import android.app.LoaderManager;
+import android.content.Loader;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -22,8 +24,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.example.android.quakereport.Utils.QueryUtils;
+import com.example.android.quakereport.loaders.EarthquakeLoader;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -32,14 +36,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-public class EarthquakeActivity extends AppCompatActivity {
+public class EarthquakeActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<Earthquake>> {
 
     public static final String LOG_TAG = EarthquakeActivity.class.getName();
+    private static final int EARTHQUAKE_LOADER_ID = 1;
     private static final String USGS_REQUEST_URL =
-            "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&limit=20";
+            "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&limit=10";
 
     EarthquakeAdapter adapter;
     ProgressBar progress;
+    TextView emptyList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,26 +55,54 @@ public class EarthquakeActivity extends AppCompatActivity {
         // Find a reference to the {@link ListView} in the layout
         ListView earthquakeListView = (ListView) findViewById(R.id.list);
         progress = (ProgressBar) findViewById(R.id.progress);
+        emptyList = (TextView) findViewById(R.id.txtEmptyList);
 
         // Create a new {@link ArrayAdapter} of earthquakes
         adapter = new EarthquakeAdapter(this, new ArrayList<Earthquake>());
 
         // Set the adapter on the {@link ListView}
         // so the list can be populated in the user interface
+        earthquakeListView.setEmptyView(emptyList);
         earthquakeListView.setAdapter(adapter);
 
-        FetchEarthquakesTask task = new FetchEarthquakesTask();
-        task.execute(USGS_REQUEST_URL);
+        LoaderManager loaderManager = getLoaderManager();
+        progress.setVisibility(View.VISIBLE);
 
+        if( !QueryUtils.hasInternetConnection(getApplicationContext()) ) {
+            progress.setVisibility(View.GONE);
+            emptyList.setText(R.string.no_inter_connect);
+        }else
+            loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
     }
 
+    @Override
+    public Loader<List<Earthquake>> onCreateLoader(int i, Bundle bundle) {
+        return new EarthquakeLoader(this, USGS_REQUEST_URL);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<List<Earthquake>> loader, List<Earthquake> earthquakes) {
+        adapter.clear();
+
+        if(!earthquakes.isEmpty() || earthquakes != null){
+            emptyList.setText(R.string.no_earthquakes);
+            adapter.addAll(earthquakes);
+        }
+
+        progress.setVisibility(View.GONE);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<List<Earthquake>> loader) {
+        adapter.clear();
+    }
 
     private class FetchEarthquakesTask extends AsyncTask<String, Void, List<Earthquake>>{
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            progress.setVisibility(View.VISIBLE);
+
         }
 
         @Override
@@ -87,12 +121,7 @@ public class EarthquakeActivity extends AppCompatActivity {
         protected void onPostExecute(List<Earthquake> earthquakes) {
             super.onPostExecute(earthquakes);
 
-            adapter.clear();
 
-            if(!earthquakes.isEmpty() || earthquakes != null)
-                adapter.addAll(earthquakes);
-
-            progress.setVisibility(View.GONE);
         }
     }
 }
